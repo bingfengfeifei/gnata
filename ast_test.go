@@ -65,8 +65,8 @@ func TestAnalyzeHonorsLocalVariableBindings(t *testing.T) {
 	}
 }
 
-func TestAnalyzeDoesNotCollectPathStepInternalsAsRoots(t *testing.T) {
-	analysis, err := gnata.Analyze(`$poll.items[0].status`)
+func TestAnalyzeCollectsStaticArrayIndexPathReferences(t *testing.T) {
+	analysis, err := gnata.Analyze(`$poll.items[0][1].status`)
 	if err != nil {
 		t.Fatalf("Analyze() error = %v", err)
 	}
@@ -74,8 +74,42 @@ func TestAnalyzeDoesNotCollectPathStepInternalsAsRoots(t *testing.T) {
 	if slices.Contains(got, "items") {
 		t.Fatalf("references = %#v, did not expect subscript path step internals", got)
 	}
-	if !slices.Contains(got, "$poll") {
-		t.Fatalf("references = %#v, want $poll", got)
+	if !slices.Contains(got, "$poll.items.0.1.status") {
+		t.Fatalf("references = %#v, want $poll.items.0.1.status", got)
+	}
+	for _, ref := range analysis.References {
+		if ref.Root == "$poll" && ref.Dynamic {
+			t.Fatalf("reference = %#v, did not expect static array index to be dynamic", ref)
+		}
+	}
+}
+
+func TestAnalyzeKeepsDynamicArrayIndexPathReferencesDynamic(t *testing.T) {
+	analysis, err := gnata.Analyze(`$poll.items[$i].status`)
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	got := referenceStrings(analysis.References)
+	if slices.Contains(got, "items") {
+		t.Fatalf("references = %#v, did not expect subscript path step internals", got)
+	}
+	var foundPoll bool
+	for _, ref := range analysis.References {
+		if ref.Root == "$poll" {
+			foundPoll = true
+			if !ref.Dynamic {
+				t.Fatalf("reference = %#v, want dynamic", ref)
+			}
+			if len(ref.Segments) != 0 {
+				t.Fatalf("reference = %#v, want dynamic root prefix $poll", ref)
+			}
+		}
+	}
+	if !foundPoll {
+		t.Fatalf("references = %#v, want $poll dynamic reference", got)
+	}
+	if !slices.Contains(got, "$i") {
+		t.Fatalf("references = %#v, want dynamic index variable $i", got)
 	}
 }
 

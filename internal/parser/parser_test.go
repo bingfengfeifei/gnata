@@ -62,6 +62,7 @@ func TestParser(t *testing.T) {
 		{"nested path", "a.b.c", "path", ""},
 		{"paren unwrap", "(42)", "block", ""},
 		{"unary minus", "-5", "number", ""},
+		{"unary not", "!active", "unary", "!"},
 		{"empty array", "[]", "unary", "["},
 		{"empty object", "{}", "unary", "{"},
 		{"variable root", "$", "variable", ""},

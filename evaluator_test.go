@@ -80,6 +80,7 @@ func TestEval(t *testing.T) {
 		{"or true", "true or false", nil, true},
 		{"and false", "false and true", nil, false},
 		{"or false", "false or false", nil, false},
+		{"unary not", "!active", map[string]any{"active": false}, true},
 
 		// Range
 		{"range", "1..5", nil, []any{float64(1), float64(2), float64(3), float64(4), float64(5)}},

@@ -248,6 +248,16 @@ func (p *Parser) nud() (*Node, error) { //nolint:gocyclo,funlen // dispatch
 		}
 		return &Node{Type: NodeUnary, Value: "-", Expression: sub, Pos: tok.Pos}, nil
 
+	case lexer.TokenBang:
+		if err := p.advance(); err != nil {
+			return nil, err
+		}
+		sub, err := p.expression(70)
+		if err != nil {
+			return nil, err
+		}
+		return &Node{Type: NodeUnary, Value: "!", Expression: sub, Pos: tok.Pos}, nil
+
 	case lexer.TokenStar:
 		p.infix = true
 		if err := p.advance(); err != nil {

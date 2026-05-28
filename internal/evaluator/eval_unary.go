@@ -25,6 +25,13 @@ func evalUnary(node *parser.Node, input any, env *Environment) (any, error) {
 		}
 		return -f, nil
 
+	case "!":
+		val, err := Eval(node.Expression, input, env)
+		if err != nil {
+			return nil, err
+		}
+		return !ToBoolean(val), nil
+
 	case "[":
 		// Array constructor.
 		result := make([]any, 0, len(node.Expressions))

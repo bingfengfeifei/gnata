@@ -258,12 +258,12 @@ func (s *analysisState) collectPathReference(node *parser.Node, bound map[string
 	}
 
 	for _, step := range node.Steps[1:] {
-		segment, ok := s.pathSegmentFromNode(step)
+		segments, ok := s.pathSegmentsFromNode(step)
 		if !ok {
 			ref.Dynamic = true
 			break
 		}
-		ref.Segments = append(ref.Segments, segment)
+		ref.Segments = append(ref.Segments, segments...)
 	}
 	s.references = append(s.references, ref)
 }
@@ -347,22 +347,46 @@ func functionCallName(node *parser.Node) (string, bool) {
 	}
 }
 
-func (s *analysisState) pathSegmentFromNode(node *parser.Node) (PathSegment, bool) {
+func (s *analysisState) pathSegmentsFromNode(node *parser.Node) ([]PathSegment, bool) {
 	if node == nil {
-		return PathSegment{}, false
+		return nil, false
 	}
 	switch node.Type {
 	case parser.NodeName, parser.NodeString:
-		return PathSegment{Text: node.Value, Pos: node.Pos, Quoted: astNodeQuoted(s.src, node)}, true
+		return []PathSegment{{Text: node.Value, Pos: node.Pos, Quoted: astNodeQuoted(s.src, node)}}, true
 	case parser.NodeNumber:
 		text := node.Value
 		if text == "" {
 			text = strconv.FormatFloat(node.NumVal, 'f', -1, 64)
 		}
-		return PathSegment{Text: text, Pos: node.Pos}, true
+		return []PathSegment{{Text: text, Pos: node.Pos}}, true
+	case parser.NodeBinary:
+		if node.Value != "[" {
+			return nil, false
+		}
+		left, ok := s.pathSegmentsFromNode(node.Left)
+		if !ok {
+			return nil, false
+		}
+		index, ok := s.staticArrayIndexSegment(node.Right)
+		if !ok {
+			return nil, false
+		}
+		return append(left, index), true
 	default:
+		return nil, false
+	}
+}
+
+func (s *analysisState) staticArrayIndexSegment(node *parser.Node) (PathSegment, bool) {
+	if node == nil || node.Type != parser.NodeNumber {
 		return PathSegment{}, false
 	}
+	text := node.Value
+	if text == "" {
+		text = strconv.FormatFloat(node.NumVal, 'f', -1, 64)
+	}
+	return PathSegment{Text: text, Pos: node.Pos}, true
 }
 
 func isSimplePathStep(node *parser.Node) bool {
@@ -372,6 +396,11 @@ func isSimplePathStep(node *parser.Node) bool {
 	switch node.Type {
 	case parser.NodeVariable, parser.NodeName, parser.NodeString, parser.NodeNumber:
 		return true
+	case parser.NodeBinary:
+		if node.Value != "[" || node.Right == nil || node.Right.Type != parser.NodeNumber {
+			return false
+		}
+		return isSimplePathStep(node.Left)
 	default:
 		return false
 	}
