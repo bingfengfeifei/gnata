@@ -99,6 +99,7 @@ type PathSegment struct {
 	Text   string
 	Pos    int
 	Quoted bool
+	Index  bool
 }
 
 // FunctionCall is a JSONata function call found in an expression.
@@ -386,7 +387,7 @@ func (s *analysisState) staticArrayIndexSegment(node *parser.Node) (PathSegment,
 	if text == "" {
 		text = strconv.FormatFloat(node.NumVal, 'f', -1, 64)
 	}
-	return PathSegment{Text: text, Pos: node.Pos}, true
+	return PathSegment{Text: text, Pos: node.Pos, Index: true}, true
 }
 
 func isSimplePathStep(node *parser.Node) bool {

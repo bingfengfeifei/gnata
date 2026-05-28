@@ -81,6 +81,30 @@ func TestAnalyzeCollectsStaticArrayIndexPathReferences(t *testing.T) {
 		if ref.Root == "$poll" && ref.Dynamic {
 			t.Fatalf("reference = %#v, did not expect static array index to be dynamic", ref)
 		}
+		if ref.Root == "$poll" {
+			for _, segment := range ref.Segments {
+				if (segment.Text == "0" || segment.Text == "1") && !segment.Index {
+					t.Fatalf("segment = %#v, want static array index marker", segment)
+				}
+			}
+		}
+	}
+}
+
+func TestAnalyzeDistinguishesDotNumberPathSegments(t *testing.T) {
+	analysis, err := gnata.Analyze(`$poll.items.0.status`)
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	for _, ref := range analysis.References {
+		if ref.Root != "$poll" {
+			continue
+		}
+		for _, segment := range ref.Segments {
+			if segment.Text == "0" && segment.Index {
+				t.Fatalf("segment = %#v, did not expect dot-number member to be marked as array index", segment)
+			}
+		}
 	}
 }
 
